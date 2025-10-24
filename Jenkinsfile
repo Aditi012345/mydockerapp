@@ -2,28 +2,27 @@ pipeline {
     agent any
 
     environment {
-        // Replace with your Docker Hub username
         DOCKER_HUB_USER = 'Aditi012345'
-        // Replace with your Docker image name
         IMAGE_NAME = 'mydockerapp'
-        // Define the credential ID used in Jenkins
         DOCKER_CRED_ID = 'dockerhub-cred'
+        
+        // NEW: Define the full repository name including the registry prefix (docker.io is for Docker Hub)
+        FULL_IMAGE_TAG = "docker.io/${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
     }
 
     stages {
         stage('1. Checkout Code') {
             steps {
                 echo 'Starting code checkout from GitHub...'
-                // The 'git' step is a native pipeline command, so it needs no bat/sh prefix.
                 git branch: 'main', url: 'https://github.com/Aditi012345/mydockerapp'
             }
         }
 
         stage('2. Build Docker Image') {
             steps {
-                echo "Building image ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest"
-                // FIX: Switched 'sh' to 'bat'
-                bat "docker build -t ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest ."
+                echo "Building image ${env.FULL_IMAGE_TAG}"
+                // Build the image with the full, explicit tag
+                bat "docker build -t ${env.FULL_IMAGE_TAG} ."
             }
         }
 
@@ -37,8 +36,7 @@ pipeline {
                     )
                 ]) {
                     echo 'Attempting secure login to Docker Hub...'
-                    // FIX: Switched 'sh' to 'bat'
-                    // In a 'bat' script, use %VARIABLE% syntax for injected credentials.
+                    // Use %VARIABLE% for injected credentials in 'bat'
                     bat "docker login -u %USERNAME% -p %PASSWORD%"
                 }
             }
@@ -47,8 +45,8 @@ pipeline {
         stage('4. Push Docker Image') {
             steps {
                 echo 'Pushing image to repository...'
-                // FIX: Switched 'sh' to 'bat'
-                bat "docker push ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest"
+                // Push the image using the full, explicit tag
+                bat "docker push ${env.FULL_IMAGE_TAG}"
             }
         }
     }
@@ -61,7 +59,6 @@ pipeline {
             echo "FAILURE: Pipeline failed. Check console output and logs for details."
         }
         always {
-            // FIX: Switched 'sh' to 'bat'
             bat 'docker logout'
         }
     }
