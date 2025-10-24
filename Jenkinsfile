@@ -1,41 +1,54 @@
 pipeline {
+    // Defines where the pipeline will run (any available agent)
     agent any
-    
+
+    // Define environment variables accessible throughout the pipeline
     environment {
         IMAGE_NAME = 'mydockerapp'
-        DOCKER_HUB_USER = 'YOUR_DOCKERHUB_USERNAME'  // Change this to your Docker Hub username
+        DOCKER_HUB_USER = 'Aditi012345'
     }
-    
+
+    // Stages define the main steps of the pipeline
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/YOUR_GITHUB_USERNAME/mydockerapp.git'  // Change this
+                // Pulls the code from the specified GitHub repository and branch
+                git branch: 'main', url: 'https://github.com/Aditi012345/mydockerapp'
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t %DOCKER_HUB_USER%/%IMAGE_NAME%:latest ."
+                // Use Groovy interpolation (${env.VARIABLE}) to securely pass environment variables to the bat command
+                bat "docker build -t ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest ."
             }
         }
-        
+
         stage('Login to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', 
-                                                  usernameVariable: 'USERNAME', 
-                                                  passwordVariable: 'PASSWORD')]) {
-                    bat "docker login -u %USERNAME% -p %PASSWORD%"
+                // Retrieve credentials from Jenkins and inject them as environment variables
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-cred',
+                        usernameVariable: 'Aditi012345',
+                        passwordVariable: 'Aditi#3004'
+                    )
+                ]) {
+                    // The injected environment variables (%USERNAME%, %PASSWORD%) are used by the bat command
+                    bat "docker login -u Aditi012345 -p Aditi#3004
                 }
             }
         }
-        
+
         stage('Push Docker Image') {
             steps {
-                bat "docker push %DOCKER_HUB_USER%/%IMAGE_NAME%:latest"
+                // Use Groovy interpolation (${env.VARIABLE}) for the push command
+                bat "docker push ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest"
             }
         }
     }
-    
+
+    // Post-actions run after the stages complete
     post {
         success {
             echo "Docker image successfully built and pushed to Docker Hub!"
