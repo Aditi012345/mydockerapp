@@ -1,8 +1,11 @@
-# Use OpenJDK base image FROM openjdk:17-jdk-slim
+# Use OpenJDK base image 
+FROM openjdk:17-jdk-slim
 
-# Copy application files WORKDIR /app
+# Copy application files 
+WORKDIR /app
 COPY App.java /app
 
 
 
-RUN javac App.java CMD ["java", "App"]
+RUN javac App.java 
+CMD ["java", "App"]
