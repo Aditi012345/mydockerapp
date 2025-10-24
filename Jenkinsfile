@@ -1,60 +1,73 @@
 pipeline {
-    // Defines where the pipeline will run (any available agent)
+    // 1. Agent: Run on any available agent
     agent any
 
-    // Define environment variables accessible throughout the pipeline
+    // 2. Environment Variables: Define variables once for clarity
     environment {
-        IMAGE_NAME = 'mydockerapp'
+        // Replace with your Docker Hub username
         DOCKER_HUB_USER = 'Aditi012345'
+        // Replace with your Docker image name
+        IMAGE_NAME = 'mydockerapp'
+        // Define the credential ID used in Jenkins
+        DOCKER_CRED_ID = 'dockerhub-cred'
     }
 
-    // Stages define the main steps of the pipeline
     stages {
-        stage('Checkout') {
+        stage('1. Checkout Code') {
             steps {
-                // Pulls the code from the specified GitHub repository and branch
+                echo 'Starting code checkout from GitHub...'
+                // Pulls the code from the specified repository and branch
                 git branch: 'main', url: 'https://github.com/Aditi012345/mydockerapp'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('2. Build Docker Image') {
             steps {
-                // Use Groovy interpolation (${env.VARIABLE}) to securely pass environment variables to the bat command
-                bat "docker build -t ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest ."
+                echo "Building image ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest"
+                // Uses Groovy interpolation (${env.VARIABLE}) for defined environment vars
+                sh "docker build -t ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest ."
             }
         }
 
-        stage('Login to Docker Hub') {
+        stage('3. Login to Docker Hub') {
             steps {
-                // Retrieve credentials from Jenkins and inject them as environment variables
+                // IMPORTANT: This block securely retrieves the credentials.
+                // It injects the username and password as temporary environment variables
+                // named USERNAME and PASSWORD, which prevents special character errors (like the '#').
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'dockerhub-cred',
-                        usernameVariable: 'Aditi012345',
-                        passwordVariable: 'Aditi#3004'
+                        credentialsId: env.DOCKER_CRED_ID,
+                        usernameVariable: 'USERNAME',
+                        passwordVariable: 'PASSWORD'
                     )
                 ]) {
-                    // The injected environment variables (%USERNAME%, %PASSWORD%) are used by the bat command
-                    bat "docker login -u Aditi012345 -p Aditi#3004
+                    echo 'Attempting secure login to Docker Hub...'
+                    // Access the temporary credential variables directly (no 'env.')
+                    sh "docker login -u ${USERNAME} -p ${PASSWORD}"
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('4. Push Docker Image') {
             steps {
-                // Use Groovy interpolation (${env.VARIABLE}) for the push command
-                bat "docker push ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest"
+                echo 'Pushing image to repository...'
+                // Uses Groovy interpolation for the push command
+                sh "docker push ${env.DOCKER_HUB_USER}/${env.IMAGE_NAME}:latest"
             }
         }
     }
 
-    // Post-actions run after the stages complete
+    // Post-actions run after all stages
     post {
         success {
-            echo "Docker image successfully built and pushed to Docker Hub!"
+            echo "SUCCESS: Docker image successfully built and pushed to Docker Hub!"
         }
         failure {
-            echo "Pipeline failed. Check console output for details."
+            echo "FAILURE: Pipeline failed. Check console output and logs for details."
+        }
+        always {
+            // Good practice: log out of Docker Hub when finished
+            sh 'docker logout'
         }
     }
 }
