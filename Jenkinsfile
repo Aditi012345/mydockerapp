@@ -2,11 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_USER = 'Aditi012345'
+        // FIX: Docker Hub usernames must be lowercase for image tagging
+        DOCKER_HUB_USER = 'aditi012345' 
         IMAGE_NAME = 'mydockerapp'
         DOCKER_CRED_ID = 'dockerhub-cred'
         
-        // NEW: Define the full repository name including the registry prefix (docker.io is for Docker Hub)
+        // Use the lowercase username in the full tag
         FULL_IMAGE_TAG = "docker.io/${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
     }
 
@@ -21,7 +22,7 @@ pipeline {
         stage('2. Build Docker Image') {
             steps {
                 echo "Building image ${env.FULL_IMAGE_TAG}"
-                // Build the image with the full, explicit tag
+                // Build the image with the full, explicit, and now lowercase tag
                 bat "docker build -t ${env.FULL_IMAGE_TAG} ."
             }
         }
@@ -31,12 +32,13 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: env.DOCKER_CRED_ID,
-                        usernameVariable: 'USERNAME',
+                        // NOTE: We still use the original credential fields, but the USERNAME variable 
+                        // should match the casing used to sign in (which may be mixed/capitalized).
+                        usernameVariable: 'USERNAME', 
                         passwordVariable: 'PASSWORD'
                     )
                 ]) {
                     echo 'Attempting secure login to Docker Hub...'
-                    // Use %VARIABLE% for injected credentials in 'bat'
                     bat "docker login -u %USERNAME% -p %PASSWORD%"
                 }
             }
@@ -45,7 +47,7 @@ pipeline {
         stage('4. Push Docker Image') {
             steps {
                 echo 'Pushing image to repository...'
-                // Push the image using the full, explicit tag
+                // Push the correctly tagged image
                 bat "docker push ${env.FULL_IMAGE_TAG}"
             }
         }
